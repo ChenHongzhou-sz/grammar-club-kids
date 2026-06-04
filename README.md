@@ -42,7 +42,7 @@
 - 错题复习：按知识点分类，可重新练习，可清除已掌握题目
 - 徽章系统：主语达人、动词达人、句子小勇士、语法侦探等
 - localStorage：保存学习进度、错题和徽章
-- GitHub Pages 自动部署
+- GitHub Pages 静态发布
 
 ## 技术栈
 
@@ -67,9 +67,9 @@ npm run build
 
 ## 部署到 GitHub Pages
 
-项目已包含 `.github/workflows/deploy.yml`。
+当前仓库使用 `gh-pages` 分支发布静态页面。
 
-推送到 `main` 后，GitHub Actions 会自动构建并部署到 Pages。
+源码保存在 `main` 分支；线上可用版本发布在 `gh-pages` 分支。
 
 如果仓库名是 `grammar-club-kids`，线上地址通常是：
 
