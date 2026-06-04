@@ -1,12 +1,21 @@
 import type { Question } from '../types';
-import { allLessons, grammarUnits } from './grammarUnits';
-
-function unitTitle(unitId: string) {
-  return grammarUnits.find((unit) => unit.id === unitId)?.title ?? '语法模块';
-}
+import { allLessons } from './grammarUnits';
 
 function words(sentence: string) {
   return sentence.replace(/[.?]/g, '').split(' ').filter(Boolean);
+}
+
+function isEnglishAnswer(value: string) {
+  return /^[A-Za-z0-9 +'/:-]+$/.test(value.trim());
+}
+
+function safeAnswer(lessonAnswer: string, fallbackSentence: string) {
+  if (isEnglishAnswer(lessonAnswer)) return lessonAnswer;
+  return words(fallbackSentence).find((word) => isEnglishAnswer(word)) ?? 'English';
+}
+
+function safeExampleAnswer(exampleAnswer: string, fallbackSentence: string) {
+  return safeAnswer(exampleAnswer, fallbackSentence);
 }
 
 function optionSet(correct: string, lessonId: string) {
@@ -15,13 +24,15 @@ function optionSet(correct: string, lessonId: string) {
 }
 
 export const questions: Question[] = allLessons.flatMap((lesson) => {
-  const unit = unitTitle(lesson.unitId);
   const first = lesson.examples[0];
   const second = lesson.examples[1] ?? first;
   const third = lesson.examples[2] ?? first;
+  const firstAnswer = safeExampleAnswer(first.answer, first.sentence);
+  const secondAnswer = safeExampleAnswer(second.answer, second.sentence);
+  const thirdAnswer = safeExampleAnswer(third.answer, third.sentence);
   const detectiveTokens = lesson.detectiveTokens ?? words(first.sentence);
-  const detectiveAnswer = lesson.detectiveAnswer ?? first.answer;
-  const fillAnswer = lesson.fillAnswer ?? first.answer;
+  const detectiveAnswer = safeAnswer(lesson.detectiveAnswer ?? firstAnswer, lesson.detectiveSentence ?? first.sentence);
+  const fillAnswer = safeAnswer(lesson.fillAnswer ?? firstAnswer, first.sentence);
   const fillPrompt = lesson.fillPrompt ?? `Fill in: ${first.sentence.replace(fillAnswer, '___')}`;
   const baseId = `${lesson.unitId}-${lesson.id}`;
 
@@ -32,9 +43,9 @@ export const questions: Question[] = allLessons.flatMap((lesson) => {
       lessonId: lesson.id,
       type: 'choice',
       level: 'basic',
-      prompt: `${unit}：${lesson.title}。Which answer fits? ${first.question}`,
-      options: optionSet(first.answer, lesson.id),
-      answer: first.answer,
+      prompt: `Which answer fits this example? ${first.sentence}`,
+      options: optionSet(firstAnswer, lesson.id),
+      answer: firstAnswer,
       knowledgePoint: lesson.title,
       explanationCorrect: `太棒了！${first.note}`,
       explanationWrong: `再想想：${lesson.simpleExplanation}`
@@ -71,9 +82,9 @@ export const questions: Question[] = allLessons.flatMap((lesson) => {
       lessonId: lesson.id,
       type: 'fill',
       level: 'basic',
-      prompt: `In “${second.sentence}”, answer: ${second.question}`,
+      prompt: `Find the key word in “${second.sentence}”.`,
       placeholder: '输入答案',
-      answer: second.answer,
+      answer: secondAnswer,
       knowledgePoint: lesson.title,
       explanationCorrect: `正确！${second.note}`,
       explanationWrong: `回到问题：${second.question}`
@@ -111,15 +122,15 @@ export const questions: Question[] = allLessons.flatMap((lesson) => {
       level: 'basic',
       prompt: `Match examples for ${lesson.title}.`,
       pairs: [
-        { left: first.sentence, right: first.answer },
-        { left: second.sentence, right: second.answer },
-        { left: third.sentence, right: third.answer }
+        { left: first.sentence, right: firstAnswer },
+        { left: second.sentence, right: secondAnswer },
+        { left: third.sentence, right: thirdAnswer }
       ],
-      choices: [first.answer, second.answer, third.answer],
+      choices: [firstAnswer, secondAnswer, thirdAnswer],
       answer: {
-        [first.sentence]: first.answer,
-        [second.sentence]: second.answer,
-        [third.sentence]: third.answer
+        [first.sentence]: firstAnswer,
+        [second.sentence]: secondAnswer,
+        [third.sentence]: thirdAnswer
       },
       knowledgePoint: lesson.title,
       explanationCorrect: '配对成功！你能从例句里找关键点了。',
@@ -131,12 +142,12 @@ export const questions: Question[] = allLessons.flatMap((lesson) => {
       lessonId: lesson.id,
       type: 'choice',
       level: 'basic',
-      prompt: `Which memory tip belongs to ${lesson.title}?`,
-      options: [lesson.memoryTip, '过去事情 yesterday，动词换装很关键。', '近处 this these，远处 that those。', '大 in 日 on 点 at。'],
-      answer: lesson.memoryTip,
+      prompt: `Which English sentence is a good practice example?`,
+      options: [third.sentence, 'A red pencil', 'Very quickly', 'Under the chair'],
+      answer: third.sentence,
       knowledgePoint: lesson.title,
-      explanationCorrect: '口诀选对了！记住它，做题会快很多。',
-      explanationWrong: `本课口诀是：${lesson.memoryTip}`
+      explanationCorrect: '选对了！中文口诀只用来帮助理解，答案保持英文。',
+      explanationWrong: `看英文例句，不要选中文说明。`
     }
   ];
 
@@ -164,7 +175,7 @@ export const questions: Question[] = allLessons.flatMap((lesson) => {
       prompt: `语法侦探：tap the answer to “${third.question}”.`,
       sentence: third.sentence,
       tokens: words(third.sentence),
-      answer: String(third.answer).split(' ').pop() ?? third.answer,
+      answer: String(thirdAnswer).split(' ').pop() ?? thirdAnswer,
       knowledgePoint: lesson.title,
       explanationCorrect: `对！${third.note}`,
       explanationWrong: `提示：${third.question}`
@@ -179,8 +190,8 @@ export const questions: Question[] = allLessons.flatMap((lesson) => {
       type: 'timed',
       level: 'challenge',
       prompt: `10 秒挑战：${first.question}`,
-      options: optionSet(first.answer, lesson.id),
-      answer: first.answer,
+      options: optionSet(firstAnswer, lesson.id),
+      answer: firstAnswer,
       timeLimitSeconds: 10,
       knowledgePoint: lesson.title,
       explanationCorrect: '闯关成功！你抓住关键点了。',
@@ -205,11 +216,11 @@ export const questions: Question[] = allLessons.flatMap((lesson) => {
       lessonId: lesson.id,
       type: 'trueFalse',
       level: 'challenge',
-      prompt: `True or false: ${lesson.chineseExplanation}`,
+      prompt: `True or false: “${first.sentence}” is an English example for this lesson.`,
       answer: 'true',
       knowledgePoint: lesson.title,
-      explanationCorrect: '正确！中文说明理解到位。',
-      explanationWrong: '这是本课中文说明，回学习卡看一眼。'
+      explanationCorrect: '正确！英文例句可以用来练本课知识点。',
+      explanationWrong: '回学习卡看英文例句，再来判断。'
     },
     {
       id: `${baseId}-mini-4`,
@@ -230,12 +241,12 @@ export const questions: Question[] = allLessons.flatMap((lesson) => {
       lessonId: lesson.id,
       type: 'fill',
       level: 'challenge',
-      prompt: `Memory check: ${lesson.memoryTip.replace(String(lesson.memoryTip.split(' ')[0]), '___')}`,
-      placeholder: '补出口诀第一个词',
-      answer: lesson.memoryTip.split(' ')[0],
+      prompt: `Mini quiz fill: ${third.sentence.replace(thirdAnswer, '___')}`,
+      placeholder: '输入英文答案',
+      answer: thirdAnswer,
       knowledgePoint: lesson.title,
-      explanationCorrect: '口诀记住了，真不错。',
-      explanationWrong: `完整口诀：${lesson.memoryTip}`
+      explanationCorrect: '很好！答案是英文词或英文短语。',
+      explanationWrong: `提示：看例句 “${third.sentence}”。`
     }
   ];
 
