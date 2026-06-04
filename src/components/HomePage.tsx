@@ -1,5 +1,5 @@
 import { ArrowRight, BookOpenCheck, Medal, NotebookTabs, Sparkles, Target } from 'lucide-react';
-import { grammarUnits } from '../data/grammarUnits';
+import { allLessons } from '../data/grammarUnits';
 import type { ProgressState } from '../types';
 import { LearningMap } from './LearningMap';
 
@@ -9,10 +9,11 @@ interface Props {
   onOpenLesson: (lessonId: string) => void;
   onOpenWrongBook: () => void;
   onOpenBadges: () => void;
+  onDailyReview: () => void;
 }
 
-export function HomePage({ progress, stats, onOpenLesson, onOpenWrongBook, onOpenBadges }: Props) {
-  const lessons = grammarUnits[0].lessons;
+export function HomePage({ progress, stats, onOpenLesson, onOpenWrongBook, onOpenBadges, onDailyReview }: Props) {
+  const lessons = allLessons;
   const nextLesson = lessons.find((lesson) => !progress.completedLessons.includes(lesson.id)) ?? lessons[0];
 
   return (
@@ -25,7 +26,7 @@ export function HomePage({ progress, stats, onOpenLesson, onOpenWrongBook, onOpe
               Grammar Kingdom
             </p>
             <h1 className="mt-4 text-4xl font-black leading-tight md:text-6xl">英语语法王国</h1>
-            <p className="mt-3 max-w-xl text-base font-semibold text-white/85">用卡片学习，用练习闯关，用错题复习，把英语句子看得越来越清楚。</p>
+          <p className="mt-3 max-w-xl text-base font-semibold text-white/85">用卡片学习，用练习闯关，用每日复习把语法练成习惯。</p>
           </div>
           <button type="button" onClick={() => onOpenLesson(nextLesson.id)} className="inline-flex items-center justify-center gap-2 rounded-3xl bg-white px-5 py-4 text-lg font-black text-sky-700">
             继续闯关
@@ -38,7 +39,7 @@ export function HomePage({ progress, stats, onOpenLesson, onOpenWrongBook, onOpe
         <div className="rounded-3xl bg-white p-4 shadow-soft ring-1 ring-slate-200/70">
           <Target className="h-6 w-6 text-sky-600" />
           <h2 className="mt-2 font-black text-ink">今日任务</h2>
-          <p className="mt-1 text-sm text-slate-600">完成 3 个小关卡，至少复习 1 道错题。</p>
+          <p className="mt-1 text-sm text-slate-600">完成 3 个小关卡，做 10 道每日复习。</p>
         </div>
         <div className="rounded-3xl bg-white p-4 shadow-soft ring-1 ring-slate-200/70">
           <BookOpenCheck className="h-6 w-6 text-emerald-600" />
@@ -56,6 +57,10 @@ export function HomePage({ progress, stats, onOpenLesson, onOpenWrongBook, onOpe
           <p className="mt-1 text-sm text-slate-600">{progress.earnedBadges.length} 枚已获得</p>
         </button>
       </section>
+
+      <button type="button" onClick={onDailyReview} className="mt-4 w-full rounded-[2rem] bg-ink px-5 py-4 text-lg font-black text-white shadow-soft">
+        开始每日复习 · 10 题
+      </button>
 
       <div className="mt-4">
         <LearningMap progress={progress} onOpenLesson={onOpenLesson} />

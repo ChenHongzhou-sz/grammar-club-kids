@@ -1,4 +1,6 @@
 export type QuestionType = 'choice' | 'fill' | 'trueFalse' | 'order' | 'detective' | 'match' | 'timed';
+export type LessonLevel = 'primary' | 'junior' | 'challenge';
+export type LearningStage = 'basic' | 'advanced' | 'power';
 
 export interface Example {
   sentence: string;
@@ -12,11 +14,23 @@ export interface Lesson {
   unitId: string;
   title: string;
   shortTitle: string;
+  level: LessonLevel;
+  stage: LearningStage;
+  simpleExplanation: string;
+  kidExplanation: string;
+  chineseExplanation: string;
+  memoryTip: string;
   oneLine: string;
   visualExample: Example;
   lifeExplanation: string;
   chant: string;
   examples: Example[];
+  contrastExamples?: string[];
+  fillPrompt?: string;
+  fillAnswer?: string;
+  detectiveSentence?: string;
+  detectiveTokens?: string[];
+  detectiveAnswer?: string;
 }
 
 export interface GrammarUnit {
@@ -25,6 +39,8 @@ export interface GrammarUnit {
   place: string;
   description: string;
   color: string;
+  emoji: string;
+  order: number;
   lessons: Lesson[];
 }
 
@@ -90,6 +106,9 @@ export type Question =
 
 export interface WrongRecord {
   questionId: string;
+  unitId?: string;
+  lessonId?: string;
+  moduleTitle?: string;
   prompt: string;
   wrongAnswer: string;
   correctAnswer: string;

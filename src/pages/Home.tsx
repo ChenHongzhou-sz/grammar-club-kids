@@ -7,6 +7,7 @@ interface Props {
   onOpenLesson: (lessonId: string) => void;
   onOpenWrongBook: () => void;
   onOpenBadges: () => void;
+  onDailyReview: () => void;
 }
 
 export function Home(props: Props) {

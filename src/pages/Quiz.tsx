@@ -10,10 +10,13 @@ interface Props {
   onComplete: () => void;
   onBack: () => void;
   focusQuestionId?: string;
+  questionsOverride?: Question[];
+  title?: string;
 }
 
-export function Quiz({ lessonId, onAnswer, onComplete, onBack, focusQuestionId }: Props) {
+export function Quiz({ lessonId, onAnswer, onComplete, onBack, focusQuestionId, questionsOverride, title }: Props) {
   const questions = useMemo(() => {
+    if (questionsOverride) return questionsOverride;
     const list = questionsByLesson(lessonId);
     if (!focusQuestionId) return list;
     const focused = list.find((question) => question.id === focusQuestionId);
@@ -42,6 +45,7 @@ export function Quiz({ lessonId, onAnswer, onComplete, onBack, focusQuestionId }
       <button type="button" onClick={onBack} className="mb-4 rounded-full bg-white px-4 py-2 text-sm font-black text-sky-700 shadow-sm ring-1 ring-sky-100">
         返回学习卡
       </button>
+      {title && <h1 className="mb-4 text-2xl font-black text-ink">{title}</h1>}
       <QuizCard
         question={questions[index]}
         index={index}

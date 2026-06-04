@@ -26,6 +26,22 @@ export const badges: Badge[] = [
     target: 7
   },
   {
+    id: 'noun-city-star',
+    title: '名词城小明星',
+    description: '完成 12 个小关卡。',
+    icon: '🏙️',
+    condition: 'lesson',
+    target: 12
+  },
+  {
+    id: 'map-explorer',
+    title: '地图探索家',
+    description: '完成 24 个小关卡。',
+    icon: '🗺️',
+    condition: 'lesson',
+    target: 24
+  },
+  {
     id: 'grammar-detective',
     title: '语法侦探',
     description: '答对 6 道语法侦探题。',
@@ -40,6 +56,14 @@ export const badges: Badge[] = [
     icon: '🏅',
     condition: 'questions',
     target: 20
+  },
+  {
+    id: 'practice-100',
+    title: '百题训练家',
+    description: '累计答对 100 道题。',
+    icon: '💯',
+    condition: 'questions',
+    target: 100
   },
   {
     id: 'three-day-streak',

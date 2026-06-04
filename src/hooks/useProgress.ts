@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { badges } from '../data/badges';
+import { grammarUnits } from '../data/grammarUnits';
 import { questions } from '../data/questions';
 import type { ProgressState, Question, WrongRecord } from '../types';
 
@@ -108,6 +109,9 @@ export function useProgress() {
         const previous = wrongBook[question.id];
         const record: WrongRecord = {
           questionId: question.id,
+          unitId: question.unitId,
+          lessonId: question.lessonId,
+          moduleTitle: grammarUnits.find((unit) => unit.id === question.unitId)?.title,
           prompt: question.prompt,
           wrongAnswer: Array.isArray(answer) ? answer.join(' ') : typeof answer === 'object' ? JSON.stringify(answer) : String(answer),
           correctAnswer: Array.isArray(question.answer)
@@ -150,9 +154,31 @@ export function useProgress() {
     };
   }, [progress]);
 
+  const dailyReviewQuestions = useMemo(() => {
+    const wrongIds = Object.values(progress.wrongBook)
+      .sort((a, b) => b.mistakeCount - a.mistakeCount || b.lastMistakeAt.localeCompare(a.lastMistakeAt))
+      .map((record) => record.questionId);
+    const recentLessonIds = progress.completedLessons.slice(-5);
+    const recentIds = questions
+      .filter((question) => recentLessonIds.includes(question.lessonId))
+      .map((question) => question.id);
+    const weakUnitIds = Object.values(progress.wrongBook)
+      .map((record) => record.unitId)
+      .filter((unitId): unitId is string => Boolean(unitId));
+    const weakIds = questions
+      .filter((question) => weakUnitIds.includes(question.unitId))
+      .map((question) => question.id);
+    const fallbackIds = questions.map((question) => question.id);
+    const orderedIds = Array.from(new Set([...wrongIds, ...recentIds, ...weakIds, ...fallbackIds])).slice(0, 10);
+    return orderedIds
+      .map((id) => questions.find((question) => question.id === id))
+      .filter((question): question is Question => Boolean(question));
+  }, [progress]);
+
   return {
     progress,
     stats,
+    dailyReviewQuestions,
     completeLesson,
     recordAnswer,
     clearWrong,

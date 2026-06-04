@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { BookOpen, HomeIcon, Medal, NotebookTabs } from 'lucide-react';
-import { grammarUnits } from './data/grammarUnits';
+import { allLessons } from './data/grammarUnits';
 import { questions } from './data/questions';
 import { useProgress } from './hooks/useProgress';
 import { Home } from './pages/Home';
@@ -10,16 +10,16 @@ import { Review } from './pages/Review';
 import { Unit } from './pages/Unit';
 import type { Question } from './types';
 
-type View = 'home' | 'unit' | 'lesson' | 'quiz' | 'wrong' | 'badges';
+type View = 'home' | 'unit' | 'lesson' | 'quiz' | 'daily' | 'wrong' | 'badges';
 
 export default function App() {
-  const { progress, stats, completeLesson, recordAnswer, clearWrong } = useProgress();
+  const { progress, stats, dailyReviewQuestions, completeLesson, recordAnswer, clearWrong } = useProgress();
   const [view, setView] = useState<View>('home');
   const [lessonId, setLessonId] = useState('what-is-sentence');
   const [focusQuestionId, setFocusQuestionId] = useState<string | undefined>();
 
   const lesson = useMemo(() => {
-    return grammarUnits.flatMap((unit) => unit.lessons).find((item) => item.id === lessonId) ?? grammarUnits[0].lessons[0];
+    return allLessons.find((item) => item.id === lessonId) ?? allLessons[0];
   }, [lessonId]);
 
   const openLesson = (id: string) => {
@@ -67,6 +67,7 @@ export default function App() {
           onOpenLesson={openLesson}
           onOpenWrongBook={() => setView('wrong')}
           onOpenBadges={() => setView('badges')}
+          onDailyReview={() => setView('daily')}
         />
       )}
       {view === 'unit' && <Unit progress={progress} onOpenLesson={openLesson} />}
@@ -82,6 +83,16 @@ export default function App() {
             setFocusQuestionId(undefined);
             setView('unit');
           }}
+        />
+      )}
+      {view === 'daily' && (
+        <Quiz
+          lessonId={lesson.id}
+          title="每日复习 · 10 题"
+          questionsOverride={dailyReviewQuestions}
+          onBack={() => setView('home')}
+          onAnswer={handleAnswer}
+          onComplete={() => setView('home')}
         />
       )}
       {(view === 'wrong' || view === 'badges') && (

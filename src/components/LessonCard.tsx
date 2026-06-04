@@ -17,6 +17,10 @@ export function LessonCard({ lesson, onStartQuiz, onBack }: Props) {
       <section className="rounded-[2rem] bg-white p-5 shadow-soft ring-1 ring-slate-200/70">
         <p className="text-sm font-black text-sky-600">学习卡片</p>
         <h1 className="mt-1 text-3xl font-black text-ink">{lesson.title}</h1>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-black uppercase text-sky-700">{lesson.level}</span>
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-black text-emerald-700">{lesson.stage === 'basic' ? '基础阶段' : lesson.stage === 'advanced' ? '进阶阶段' : '提高阶段'}</span>
+        </div>
 
         <div className="mt-5 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-3xl bg-skysoft p-4">
@@ -24,7 +28,7 @@ export function LessonCard({ lesson, onStartQuiz, onBack }: Props) {
               <Lightbulb className="h-4 w-4" />
               一句话讲清楚
             </div>
-            <p className="text-2xl font-black leading-snug text-ink">{lesson.oneLine}</p>
+            <p className="text-2xl font-black leading-snug text-ink">{lesson.simpleExplanation}</p>
           </div>
 
           <div className="rounded-3xl bg-peachsoft p-4">
@@ -32,7 +36,7 @@ export function LessonCard({ lesson, onStartQuiz, onBack }: Props) {
               <Music2 className="h-4 w-4" />
               口诀
             </div>
-            <p className="text-xl font-black leading-snug text-ink">{lesson.chant}</p>
+            <p className="text-xl font-black leading-snug text-ink">{lesson.memoryTip}</p>
           </div>
         </div>
 
@@ -63,7 +67,8 @@ export function LessonCard({ lesson, onStartQuiz, onBack }: Props) {
             <BookOpen className="h-4 w-4" />
             生活化理解
           </div>
-          <p className="text-lg leading-relaxed text-slate-700">{lesson.lifeExplanation}</p>
+          <p className="text-lg leading-relaxed text-slate-700">{lesson.kidExplanation}</p>
+          <p className="mt-2 text-sm leading-relaxed text-slate-500">{lesson.chineseExplanation}</p>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">

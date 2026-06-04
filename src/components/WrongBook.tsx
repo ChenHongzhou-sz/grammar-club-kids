@@ -8,10 +8,13 @@ interface Props {
 }
 
 export function WrongBook({ progress, onClear, onReview }: Props) {
-  const records = Object.values(progress.wrongBook).sort((a, b) => b.lastMistakeAt.localeCompare(a.lastMistakeAt));
+  const records = Object.values(progress.wrongBook).sort((a, b) => b.mistakeCount - a.mistakeCount || b.lastMistakeAt.localeCompare(a.lastMistakeAt));
+  const today = new Date().toISOString().slice(0, 10);
+  const todayRecords = records.filter((record) => record.lastMistakeAt.slice(0, 10) === today);
   const grouped = records.reduce<Record<string, typeof records>>((acc, record) => {
-    acc[record.knowledgePoint] = acc[record.knowledgePoint] || [];
-    acc[record.knowledgePoint].push(record);
+    const key = `${record.moduleTitle ?? '语法模块'} · ${record.knowledgePoint}`;
+    acc[key] = acc[key] || [];
+    acc[key].push(record);
     return acc;
   }, {});
 
@@ -20,7 +23,7 @@ export function WrongBook({ progress, onClear, onReview }: Props) {
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-black text-ink">我的错题</h2>
-          <p className="text-sm text-slate-500">今日错题复习会自动放在最前面。</p>
+          <p className="text-sm text-slate-500">按模块和知识点分类，错误次数多的排前面。</p>
         </div>
         <span className="rounded-full bg-rose-100 px-3 py-1 text-sm font-black text-rose-600">{records.length} 题</span>
       </div>
@@ -29,6 +32,13 @@ export function WrongBook({ progress, onClear, onReview }: Props) {
         <div className="rounded-3xl bg-mintsoft p-5 text-center">
           <p className="text-2xl font-black text-ink">今天没有错题</p>
           <p className="mt-1 text-slate-600">继续闯关，保持这个状态。</p>
+        </div>
+      )}
+
+      {!!todayRecords.length && (
+        <div className="mb-4 rounded-3xl bg-amber-50 p-4 ring-1 ring-amber-200">
+          <h3 className="font-black text-amber-800">今日错题复习</h3>
+          <p className="mt-1 text-sm text-amber-700">今天新增 {todayRecords.length} 道错题，建议先重新练习。</p>
         </div>
       )}
 
