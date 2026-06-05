@@ -111,17 +111,52 @@ export function QuizCard({ question, index, total, onAnswer, onNext }: Props) {
 
     if (question.type === 'order') {
       const selected = Array.isArray(answer) ? answer : [];
+      const selectedCounts = selected.reduce<Map<string, number>>((counts, piece) => {
+        counts.set(String(piece), (counts.get(String(piece)) ?? 0) + 1);
+        return counts;
+      }, new Map());
+      const remainingPieces = shuffledPieces.filter((piece) => {
+        const used = selectedCounts.get(piece) ?? 0;
+        if (used === 0) return true;
+        selectedCounts.set(piece, used - 1);
+        return false;
+      });
       return (
         <div className="grid gap-4">
-          <div className="min-h-16 rounded-3xl bg-skysoft p-3 font-black text-sky-900">{selected.length ? selected.join(' ') : '点击下面词块来排序'}</div>
+          <div className="min-h-16 rounded-3xl bg-skysoft p-3 text-sky-900">
+            {selected.length ? (
+              <div className="flex flex-wrap gap-2">
+                {selected.map((piece, pieceIndex) => (
+                  <button
+                    key={`${piece}-${pieceIndex}`}
+                    type="button"
+                    onClick={() => !submitted && setAnswer(selected.filter((_, indexValue) => indexValue !== pieceIndex))}
+                    className="rounded-2xl bg-white px-3 py-2 font-black ring-1 ring-sky-200"
+                  >
+                    {piece}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span className="font-black">点击下面词块来排序</span>
+            )}
+          </div>
           <div className="flex flex-wrap gap-2">
-            {shuffledPieces.map((piece) => (
-              <button key={piece} type="button" onClick={() => setAnswer([...selected, piece])} className="rounded-2xl bg-white px-4 py-3 font-black text-ink ring-1 ring-slate-200">
+            {remainingPieces.map((piece, pieceIndex) => (
+              <button
+                key={`${piece}-${pieceIndex}`}
+                type="button"
+                onClick={() => !submitted && setAnswer([...selected, piece])}
+                className="rounded-2xl bg-white px-4 py-3 font-black text-ink ring-1 ring-slate-200"
+              >
                 {piece}
               </button>
             ))}
           </div>
           <div className="flex gap-2">
+            <button type="button" onClick={() => setAnswer(selected.slice(0, -1))} className="rounded-full bg-white px-4 py-2 font-black text-slate-600 ring-1 ring-slate-200">
+              撤销一个
+            </button>
             <button type="button" onClick={() => setAnswer([])} className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 font-black text-slate-600">
               <Shuffle className="h-4 w-4" />
               重排
@@ -157,7 +192,7 @@ export function QuizCard({ question, index, total, onAnswer, onNext }: Props) {
                 onChange={(event) => setAnswer({ ...current, [pair.left]: event.target.value })}
                 className="min-h-12 rounded-2xl border border-slate-200 bg-white px-3 font-bold"
               >
-                <option value="">选择匹配项</option>
+                <option value="">请选择对应项</option>
                 {matchQuestion.choices.map((choice) => (
                   <option key={choice} value={choice}>{choice}</option>
                 ))}

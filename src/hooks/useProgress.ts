@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { badges } from '../data/badges';
 import { grammarUnits } from '../data/grammarUnits';
 import { questions } from '../data/questions';
-import type { ProgressState, Question, WrongRecord } from '../types';
+import type { MatchQuestion, ProgressState, Question, WrongRecord } from '../types';
 
 const STORAGE_KEY = 'grammar-club-kids-progress';
 
@@ -33,9 +33,15 @@ function normalizeAnswer(value: unknown) {
   return String(value ?? '').trim().toLowerCase();
 }
 
+function isMatchCorrect(question: MatchQuestion, answer: unknown) {
+  if (typeof answer !== 'object' || answer === null) return false;
+  const current = answer as Record<string, unknown>;
+  return question.pairs.every((pair) => normalizeAnswer(current[pair.left]) === normalizeAnswer(pair.right));
+}
+
 export function isAnswerCorrect(question: Question, answer: unknown) {
   if (question.type === 'match') {
-    return normalizeAnswer(answer) === normalizeAnswer(question.answer);
+    return isMatchCorrect(question, answer);
   }
   return normalizeAnswer(answer) === normalizeAnswer(question.answer);
 }

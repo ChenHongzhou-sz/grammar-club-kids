@@ -1,256 +1,208 @@
-import type { Question } from '../types';
+import type { Example, Question } from '../types';
 import { allLessons } from './grammarUnits';
 
-function words(sentence: string) {
-  return sentence.replace(/[.?]/g, '').split(' ').filter(Boolean);
+const GENERIC_OPTION_POOL = [
+  'subject',
+  'verb',
+  'object',
+  'book',
+  'happy',
+  'school',
+  'is',
+  'are',
+  'play',
+  'on',
+  'under',
+  'yesterday',
+  'tomorrow',
+  'S + V',
+  'S + V + O'
+];
+
+function uniqueValues(values: string[]) {
+  const seen = new Set<string>();
+  return values.filter((value) => {
+    const key = value.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
-function isEnglishAnswer(value: string) {
-  return /^[A-Za-z0-9 +'/:-]+$/.test(value.trim());
+function sentenceTokens(sentence: string) {
+  return sentence
+    .replace(/[.,?!]/g, '')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
 }
 
-function safeAnswer(lessonAnswer: string, fallbackSentence: string) {
-  if (isEnglishAnswer(lessonAnswer)) return lessonAnswer;
-  return words(fallbackSentence).find((word) => isEnglishAnswer(word)) ?? 'English';
+function isEnglishLike(value: string) {
+  return /^[A-Za-z0-9][A-Za-z0-9 +'/:-]*$/.test(value.trim());
 }
 
-function safeExampleAnswer(exampleAnswer: string, fallbackSentence: string) {
-  return safeAnswer(exampleAnswer, fallbackSentence);
+function normalizeFillPrompt(prompt: string) {
+  const cleaned = prompt.replace(/^Fill in:\s*/i, '').trim();
+  const subjectMatch = cleaned.match(/^In [“"](.+)[”"], the subject is ___\.?$/);
+  if (subjectMatch) return `在 “${subjectMatch[1]}” 这句里，主语是 ___。`;
+  const objectMatch = cleaned.match(/^In [“"](.+)[”"], the object is ___\.?$/);
+  if (objectMatch) return `在 “${objectMatch[1]}” 这句里，宾语是 ___。`;
+  return cleaned;
 }
 
-function optionSet(correct: string, lessonId: string) {
-  const pool = ['subject', 'verb', 'object', 'noun', 'pronoun', 'is', 'are', 'in', 'on', 'at', 'happy', 'books', 'S + V', 'S + V + O'];
-  return Array.from(new Set([correct, ...pool.filter((item) => item.toLowerCase() !== correct.toLowerCase() && item !== lessonId).slice(0, 3)])).slice(0, 4);
+function fallbackKeyword(sentence: string) {
+  const contentTokens = sentenceTokens(sentence).filter((token) => !['a', 'an', 'the'].includes(token.toLowerCase()));
+  return contentTokens[contentTokens.length - 1] ?? 'word';
+}
+
+function exampleKeyword(example: Example) {
+  const answer = String(example.answer).trim();
+  if (isEnglishLike(answer)) return answer;
+  return fallbackKeyword(example.sentence);
+}
+
+function lessonOptionPool(correct: string, examples: Example[], fillAnswer: string, detectiveAnswer: string, contrastExamples: string[] = []) {
+  const exampleAnswers = examples.map((example) => String(example.answer).trim()).filter(isEnglishLike);
+  const exampleKeywords = examples.map(exampleKeyword);
+  const contrastWords = contrastExamples.filter(isEnglishLike);
+  const sentenceWords = examples.flatMap((example) => sentenceTokens(example.sentence)).filter((token) => token.length > 1);
+  return uniqueValues([correct, fillAnswer, detectiveAnswer, ...exampleAnswers, ...exampleKeywords, ...contrastWords, ...sentenceWords, ...GENERIC_OPTION_POOL]);
+}
+
+function buildOptions(correct: string, examples: Example[], fillAnswer: string, detectiveAnswer: string, contrastExamples: string[] = []) {
+  const pool = lessonOptionPool(correct, examples, fillAnswer, detectiveAnswer, contrastExamples);
+  const distractors = pool.filter((item) => item.trim().toLowerCase() !== correct.trim().toLowerCase()).slice(0, 3);
+  return uniqueValues([correct, ...distractors]).slice(0, 4);
+}
+
+function resolveDetectiveAnswer(detectiveAnswer: string, tokens: string[]) {
+  if (tokens.includes(detectiveAnswer)) return detectiveAnswer;
+  const answerWords = sentenceTokens(detectiveAnswer);
+  const matched = answerWords.find((word) => tokens.includes(word));
+  if (matched) return matched;
+  const normalizedAnswer = detectiveAnswer.toLowerCase();
+  const similarToken = tokens.find((token) => token.toLowerCase().startsWith(normalizedAnswer) || normalizedAnswer.startsWith(token.toLowerCase()));
+  return similarToken ?? tokens.find((token) => !['a', 'an', 'the'].includes(token.toLowerCase())) ?? tokens[0] ?? detectiveAnswer;
+}
+
+function matchLabel(example: Example) {
+  return `${example.question}：${example.answer}`;
 }
 
 export const questions: Question[] = allLessons.flatMap((lesson) => {
   const first = lesson.examples[0];
   const second = lesson.examples[1] ?? first;
-  const third = lesson.examples[2] ?? first;
-  const firstAnswer = safeExampleAnswer(first.answer, first.sentence);
-  const secondAnswer = safeExampleAnswer(second.answer, second.sentence);
-  const thirdAnswer = safeExampleAnswer(third.answer, third.sentence);
-  const detectiveTokens = lesson.detectiveTokens ?? words(first.sentence);
-  const detectiveAnswer = safeAnswer(lesson.detectiveAnswer ?? firstAnswer, lesson.detectiveSentence ?? first.sentence);
-  const fillAnswer = safeAnswer(lesson.fillAnswer ?? firstAnswer, first.sentence);
-  const fillPrompt = lesson.fillPrompt ?? `Fill in: ${first.sentence.replace(fillAnswer, '___')}`;
+  const third = lesson.examples[2] ?? second;
+  const fillAnswer = String(lesson.fillAnswer ?? exampleKeyword(first)).trim();
+  const fillPrompt = normalizeFillPrompt(lesson.fillPrompt ?? first.sentence.replace(fillAnswer, '___'));
+  const rawTokens = lesson.detectiveTokens?.length ? lesson.detectiveTokens : sentenceTokens(lesson.detectiveSentence ?? first.sentence);
+  const detectiveTokens = rawTokens.map((token) => token.trim()).filter(Boolean);
+  const rawDetectiveAnswer = String(lesson.detectiveAnswer ?? fillAnswer).trim();
+  const detectiveAnswer = resolveDetectiveAnswer(rawDetectiveAnswer, detectiveTokens);
+  const exampleSentence = lesson.detectiveSentence ?? first.sentence;
+  const orderSentence = first.sentence;
+  const orderAnswer = sentenceTokens(orderSentence);
+  const examples = [first, second, third];
+  const matchChoices = uniqueValues(examples.map(matchLabel));
+  const quickOptions = buildOptions(fillAnswer, examples, fillAnswer, detectiveAnswer, lesson.contrastExamples);
+  const keywordOptions = buildOptions(detectiveAnswer, examples, fillAnswer, detectiveAnswer, lesson.contrastExamples);
   const baseId = `${lesson.unitId}-${lesson.id}`;
 
-  const basic: Question[] = [
+  return [
     {
-      id: `${baseId}-basic-choice-1`,
+      id: `${baseId}-choice-keyword`,
       unitId: lesson.unitId,
       lessonId: lesson.id,
       type: 'choice',
       level: 'basic',
-      prompt: `Which answer fits this example? ${first.sentence}`,
-      options: optionSet(firstAnswer, lesson.id),
-      answer: firstAnswer,
+      prompt: `读句子：${exampleSentence} 下面哪个英文词或短语是这题要找的关键词？`,
+      options: keywordOptions,
+      answer: detectiveAnswer,
       knowledgePoint: lesson.title,
-      explanationCorrect: `太棒了！${first.note}`,
-      explanationWrong: `再想想：${lesson.simpleExplanation}`
+      explanationCorrect: `答对了，${detectiveAnswer} 就是这句里最关键的部分。`,
+      explanationWrong: `先回忆本课要点：${lesson.chineseExplanation}`
     },
     {
-      id: `${baseId}-basic-choice-2`,
-      unitId: lesson.unitId,
-      lessonId: lesson.id,
-      type: 'choice',
-      level: 'basic',
-      prompt: `Choose the example for “${lesson.shortTitle}”.`,
-      options: [first.sentence, ...(lesson.contrastExamples ?? [second.sentence, third.sentence]).slice(0, 3)],
-      answer: first.sentence,
-      knowledgePoint: lesson.title,
-      explanationCorrect: `对！${first.sentence} 可以帮助理解 ${lesson.title}。`,
-      explanationWrong: `先看例句里的关键部分：${first.answer}。`
-    },
-    {
-      id: `${baseId}-basic-fill-1`,
+      id: `${baseId}-fill-main`,
       unitId: lesson.unitId,
       lessonId: lesson.id,
       type: 'fill',
       level: 'basic',
-      prompt: fillPrompt,
-      placeholder: '输入答案',
+      prompt: `按提示填空：${fillPrompt}`,
+      placeholder: '请输入英文答案',
       answer: fillAnswer,
       knowledgePoint: lesson.title,
-      explanationCorrect: `很好！${fillAnswer} 是这里的关键答案。`,
-      explanationWrong: `提示：${lesson.memoryTip}`
+      explanationCorrect: `填得很准，答案就是 ${fillAnswer}。`,
+      explanationWrong: `想想口诀：${lesson.memoryTip}`
     },
     {
-      id: `${baseId}-basic-fill-2`,
-      unitId: lesson.unitId,
-      lessonId: lesson.id,
-      type: 'fill',
-      level: 'basic',
-      prompt: `Find the key word in “${second.sentence}”.`,
-      placeholder: '输入答案',
-      answer: secondAnswer,
-      knowledgePoint: lesson.title,
-      explanationCorrect: `正确！${second.note}`,
-      explanationWrong: `回到问题：${second.question}`
-    },
-    {
-      id: `${baseId}-basic-true-1`,
+      id: `${baseId}-true-example`,
       unitId: lesson.unitId,
       lessonId: lesson.id,
       type: 'trueFalse',
       level: 'basic',
-      prompt: `True or false: ${lesson.simpleExplanation}`,
+      prompt: `判断：句子“${first.sentence}”可以作为“${lesson.title}”的例句。`,
       answer: 'true',
       knowledgePoint: lesson.title,
-      explanationCorrect: `对！${lesson.kidExplanation}`,
-      explanationWrong: `这句话是本课的一句话解释。`
+      explanationCorrect: '判断正确，这句就是本课的核心例句之一。',
+      explanationWrong: `回到学习卡再看看：${lesson.simpleExplanation}`
     },
     {
-      id: `${baseId}-basic-order-1`,
+      id: `${baseId}-order-example`,
       unitId: lesson.unitId,
       lessonId: lesson.id,
       type: 'order',
       level: 'basic',
-      prompt: `Put the words in order: ${first.sentence}`,
-      pieces: words(first.sentence).reverse(),
-      answer: words(first.sentence),
+      prompt: `把词块排成正确句子。提示：${lesson.simpleExplanation}`,
+      pieces: orderAnswer,
+      answer: orderAnswer,
       knowledgePoint: lesson.title,
-      explanationCorrect: `顺序正确！${first.sentence}`,
-      explanationWrong: '先找主语，再找动词，最后看后面接什么。'
+      explanationCorrect: `排好了：${orderSentence}`,
+      explanationWrong: '先找主语，再找动词，最后看后面还接了什么内容。'
     },
     {
-      id: `${baseId}-basic-match-1`,
+      id: `${baseId}-detective-tap`,
+      unitId: lesson.unitId,
+      lessonId: lesson.id,
+      type: 'detective',
+      level: 'detective',
+      prompt: `语法侦探：在“${exampleSentence}”里点出要找的关键词。`,
+      sentence: exampleSentence,
+      tokens: detectiveTokens,
+      answer: detectiveAnswer,
+      knowledgePoint: lesson.title,
+      explanationCorrect: `找到了，${detectiveAnswer} 就是本题关键词。`,
+      explanationWrong: `先想想老师在问什么：${first.question}`
+    },
+    {
+      id: `${baseId}-match-examples`,
       unitId: lesson.unitId,
       lessonId: lesson.id,
       type: 'match',
       level: 'basic',
-      prompt: `Match examples for ${lesson.title}.`,
-      pairs: [
-        { left: first.sentence, right: firstAnswer },
-        { left: second.sentence, right: secondAnswer },
-        { left: third.sentence, right: thirdAnswer }
-      ],
-      choices: [firstAnswer, secondAnswer, thirdAnswer],
-      answer: {
-        [first.sentence]: firstAnswer,
-        [second.sentence]: secondAnswer,
-        [third.sentence]: thirdAnswer
-      },
+      prompt: '请为每个句子选出对应的提问和答案。',
+      pairs: examples.map((example) => ({ left: example.sentence, right: matchLabel(example) })),
+      choices: matchChoices,
+      answer: Object.fromEntries(examples.map((example) => [example.sentence, matchLabel(example)])),
       knowledgePoint: lesson.title,
-      explanationCorrect: '配对成功！你能从例句里找关键点了。',
-      explanationWrong: '每个例句都问一遍小问题，再配答案。'
+      explanationCorrect: '配对成功，这几句的重点都找对了。',
+      explanationWrong: '先读句子，再看下拉框里的“问题 + 答案”哪一项最对应。'
     },
     {
-      id: `${baseId}-basic-choice-3`,
-      unitId: lesson.unitId,
-      lessonId: lesson.id,
-      type: 'choice',
-      level: 'basic',
-      prompt: `Which English sentence is a good practice example?`,
-      options: [third.sentence, 'A red pencil', 'Very quickly', 'Under the chair'],
-      answer: third.sentence,
-      knowledgePoint: lesson.title,
-      explanationCorrect: '选对了！中文口诀只用来帮助理解，答案保持英文。',
-      explanationWrong: `看英文例句，不要选中文说明。`
-    }
-  ];
-
-  const detective: Question[] = [
-    {
-      id: `${baseId}-detective-1`,
-      unitId: lesson.unitId,
-      lessonId: lesson.id,
-      type: 'detective',
-      level: 'detective',
-      prompt: `语法侦探：tap the key word for ${lesson.title}.`,
-      sentence: lesson.detectiveSentence ?? first.sentence,
-      tokens: detectiveTokens,
-      answer: detectiveAnswer,
-      knowledgePoint: lesson.title,
-      explanationCorrect: `好眼力！${detectiveAnswer} 是关键。`,
-      explanationWrong: `再问自己：${first.question}`
-    },
-    {
-      id: `${baseId}-detective-2`,
-      unitId: lesson.unitId,
-      lessonId: lesson.id,
-      type: 'detective',
-      level: 'detective',
-      prompt: `语法侦探：tap the answer to “${third.question}”.`,
-      sentence: third.sentence,
-      tokens: words(third.sentence),
-      answer: String(thirdAnswer).split(' ').pop() ?? thirdAnswer,
-      knowledgePoint: lesson.title,
-      explanationCorrect: `对！${third.note}`,
-      explanationWrong: `提示：${third.question}`
-    }
-  ];
-
-  const miniQuiz: Question[] = [
-    {
-      id: `${baseId}-mini-1`,
+      id: `${baseId}-timed-quick`,
       unitId: lesson.unitId,
       lessonId: lesson.id,
       type: 'timed',
       level: 'challenge',
-      prompt: `10 秒挑战：${first.question}`,
-      options: optionSet(firstAnswer, lesson.id),
-      answer: firstAnswer,
+      prompt: `10 秒快答：下面哪一项能正确填空？ ${fillPrompt}`,
+      options: quickOptions,
+      answer: fillAnswer,
       timeLimitSeconds: 10,
       knowledgePoint: lesson.title,
-      explanationCorrect: '闯关成功！你抓住关键点了。',
-      explanationWrong: `快速题也要先想：${lesson.simpleExplanation}`
-    },
-    {
-      id: `${baseId}-mini-2`,
-      unitId: lesson.unitId,
-      lessonId: lesson.id,
-      type: 'choice',
-      level: 'challenge',
-      prompt: `Which sentence is the best example of ${lesson.title}?`,
-      options: [first.sentence, 'Very quickly', 'A yellow pencil', 'Under the table'],
-      answer: first.sentence,
-      knowledgePoint: lesson.title,
-      explanationCorrect: '对！这个例句最贴近本课知识点。',
-      explanationWrong: '不要选短语，要选能表现本课知识点的句子。'
-    },
-    {
-      id: `${baseId}-mini-3`,
-      unitId: lesson.unitId,
-      lessonId: lesson.id,
-      type: 'trueFalse',
-      level: 'challenge',
-      prompt: `True or false: “${first.sentence}” is an English example for this lesson.`,
-      answer: 'true',
-      knowledgePoint: lesson.title,
-      explanationCorrect: '正确！英文例句可以用来练本课知识点。',
-      explanationWrong: '回学习卡看英文例句，再来判断。'
-    },
-    {
-      id: `${baseId}-mini-4`,
-      unitId: lesson.unitId,
-      lessonId: lesson.id,
-      type: 'order',
-      level: 'challenge',
-      prompt: `Build the example sentence: ${second.sentence}`,
-      pieces: words(second.sentence).sort(() => 0.5 - Math.random()),
-      answer: words(second.sentence),
-      knowledgePoint: lesson.title,
-      explanationCorrect: `正确！${second.sentence}`,
-      explanationWrong: '排句子时先找谁，再找做什么。'
-    },
-    {
-      id: `${baseId}-mini-5`,
-      unitId: lesson.unitId,
-      lessonId: lesson.id,
-      type: 'fill',
-      level: 'challenge',
-      prompt: `Mini quiz fill: ${third.sentence.replace(thirdAnswer, '___')}`,
-      placeholder: '输入英文答案',
-      answer: thirdAnswer,
-      knowledgePoint: lesson.title,
-      explanationCorrect: '很好！答案是英文词或英文短语。',
-      explanationWrong: `提示：看例句 “${third.sentence}”。`
+      explanationCorrect: `反应很快，${fillAnswer} 放进去最合适。`,
+      explanationWrong: `先看清句子，再想本课重点：${lesson.simpleExplanation}`
     }
-  ];
-
-  return [...basic, ...detective, ...miniQuiz];
+  ] satisfies Question[];
 });
 
 export function questionsByLesson(lessonId: string) {
