@@ -11,8 +11,8 @@ export const tenseForest: GrammarUnit = {
   color: 'from-lime-300 to-green-500',
   description: '用时间线看懂现在、正在、过去和将来。',
   lessons: [
-    ['simple-present','一般现在时','经常做、习惯做，用一般现在时。','每天、经常、通常发生的事，用现在时说。','常见时间词：every day, usually, often。','经常习惯现在时，every day 是提示。','plays','Tom plays tennis every day.','经常做什么？','plays'],
-    ['present-continuous','现在进行时','正在做，用 be + 动词 ing。','眼前正在发生的动作，要说 am/is/are + ing。','now, look, listen 常提示现在进行时。','正在正在别着急，be 加 ing 在一起。','is reading','She is reading now.','正在做什么？','is reading'],
+    ['simple-present','一般现在时','经常做、习惯做，用一般现在时。','每天、经常、通常发生的事，用现在时说。','常见时间词：every day, usually, often。','经常习惯现在时，every day 是提示。','plays','Tom plays tennis every day.','哪个时间词提示一般现在时？','every day'],
+    ['present-continuous','现在进行时','正在做，用 be + 动词 ing。','眼前正在发生的动作，要说 am/is/are + ing。','now, look, listen 常提示现在进行时。','正在正在别着急，be 加 ing 在一起。','is reading','She is reading now.','哪一部分表示“正在读”？','is reading'],
     ['simple-past','一般过去时','过去发生的事，用过去式。','昨天发生的动作，动词要穿过去衣服。','yesterday, last night, ago 常提示过去时。','过去事情 yesterday，动词换装很关键。','visited','We visited Grandma yesterday.','哪个是过去式？','visited'],
     ['simple-future','一般将来时','以后要做的事，常用 will + 动词原形。','还没发生、以后要发生，用 will 帮忙。','tomorrow, next week 常提示将来时。','未来未来 will 帮忙，动词原形跟身旁。','will go','I will go tomorrow.','哪个表示将来？','will go'],
     ['tense-compare','四种基础时态对比','看时间词，就能选对时态。','先问事情发生在什么时候，再选动词样子。','every day/now/yesterday/tomorrow 是四个重要路标。','先看时间再选衣，动词时态不着急。','now','He is swimming now.','时间词是什么？','now']

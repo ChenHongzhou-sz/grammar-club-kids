@@ -116,7 +116,7 @@ export const sentenceVillage: GrammarUnit = {
       detectiveTokens: ['The', 'soup', 'is', 'hot'],
       detectiveAnswer: 'hot',
       examples: [
-        { sentence: 'She is kind.', question: 'kind 说明谁？', answer: 'She', note: 'kind 是表语。' },
+        { sentence: 'She is kind.', question: 'She 怎么样？', answer: 'kind', note: 'kind 是表语。' },
         { sentence: 'I am a student.', question: '我是什么？', answer: 'a student', note: 'a student 是表语。' },
         { sentence: 'The soup is hot.', question: '汤怎么样？', answer: 'hot', note: 'hot 是表语。' }
       ],
